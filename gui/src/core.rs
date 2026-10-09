@@ -55,7 +55,7 @@ pub struct Settings {
     pub build_cli: bool,
     pub use_fonts: bool,
     pub desktop_shortcut: bool,
-    /// UI language code (en, th, zh, ...); empty = detect on first run
+    /// UI language code (en, th, zh, ...); empty = follow the system language
     pub lang: String,
     pub self_pinned: bool,
     pub pin_asked: bool,
@@ -94,8 +94,10 @@ pub fn summary_text(l: Lang, s: &Summary) -> String {
         i18n::trf(l, "sum_fail", &[&s.ok.to_string(), &s.failed.len().to_string(), &list])
     }
 }
+/// Chosen language; an empty setting means "follow the system".
 pub fn lang(sh: &Sh) -> Lang {
-    Lang::from_code(&sh.lock().unwrap().store.settings.lang)
+    let code = sh.lock().unwrap().store.settings.lang.clone();
+    if code.is_empty() { detect_lang() } else { Lang::from_code(&code) }
 }
 pub type Sh = Arc<Mutex<Shared>>;
 
@@ -681,15 +683,33 @@ pub fn open_path(p: &Path) {
     let _ = Command::new(opener()).arg(p).spawn();
 }
 
-/// First-run language guess from the Windows UI culture.
+/// The OS display language mapped to a supported UI language (English when unsupported).
 pub fn detect_lang() -> Lang {
-    if !cfg!(windows) {
-        return unix_detect_lang();
+    if cfg!(windows) { win_detect_lang() } else { unix_detect_lang() }
+}
+#[cfg(windows)]
+fn win_detect_lang() -> Lang {
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn GetUserDefaultUILanguage() -> u16;
     }
-    let mut c = Command::new("powershell");
-    c.args(["-NoProfile", "-Command", "(Get-UICulture).TwoLetterISOLanguageName"]);
-    quiet(&mut c);
-    c.output().ok().map(|o| Lang::from_code(String::from_utf8_lossy(&o.stdout).trim())).unwrap_or(Lang::En)
+    // primary language id = low 10 bits of the LANGID
+    match unsafe { GetUserDefaultUILanguage() } & 0x3ff {
+        0x1E => Lang::Th,
+        0x04 => Lang::Zh,
+        0x11 => Lang::Ja,
+        0x12 => Lang::Ko,
+        0x0A => Lang::Es,
+        0x0C => Lang::Fr,
+        0x07 => Lang::De,
+        0x16 => Lang::Pt,
+        0x19 => Lang::Ru,
+        _ => Lang::En,
+    }
+}
+#[cfg(not(windows))]
+fn win_detect_lang() -> Lang {
+    Lang::En
 }
 
 

@@ -175,6 +175,7 @@ static TABLE: &[Row] = &[
     ("sum_fail", ["Succeeded {0} • failed {1}: {2}", "สำเร็จ {0} • ล้มเหลว {1}: {2}", "成功 {0} • 失败 {1}：{2}", "成功 {0} • 失敗 {1}：{2}", "성공 {0} • 실패 {1}: {2}", "Correctas {0} • fallidas {1}: {2}", "Réussies {0} • échecs {1} : {2}", "Erfolgreich {0} • fehlgeschlagen {1}: {2}", "Sucesso {0} • falhas {1}: {2}", "Успешно {0} • ошибок {1}: {2}"]),
     ("t_done", ["Craft Installer: done", "Craft Installer: เสร็จแล้ว", "Craft Installer：已完成", "Craft Installer：完了", "Craft Installer: 완료", "Craft Installer: listo", "Craft Installer : terminé", "Craft Installer: fertig", "Craft Installer: concluído", "Craft Installer: готово"]),
     ("t_err", ["Craft Installer: errors", "Craft Installer: มีข้อผิดพลาด", "Craft Installer：出现错误", "Craft Installer：エラーあり", "Craft Installer: 오류 발생", "Craft Installer: errores", "Craft Installer : erreurs", "Craft Installer: Fehler", "Craft Installer: erros", "Craft Installer: ошибки"]),
+    ("lang_auto", ["System language", "ภาษาของระบบ", "系统语言", "システムの言語", "시스템 언어", "Idioma del sistema", "Langue du système", "Systemsprache", "Idioma do sistema", "Язык системы"]),
     ("lang", ["Language", "ภาษา", "语言", "言語", "언어", "Idioma", "Langue", "Sprache", "Idioma", "Язык"]),
     ("pin_t", [
         "Add Craft Installer to the app menu",

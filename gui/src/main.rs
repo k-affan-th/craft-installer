@@ -40,6 +40,8 @@ enum Step {
 struct App {
     sh: Sh,
     lang: Lang,
+    /// true = language follows the system (settings.lang is empty)
+    auto: bool,
     step: Step,
     pick: BTreeMap<String, bool>,
     mode: Mode,
@@ -146,16 +148,12 @@ fn setup_style(ctx: &egui::Context) {
 impl App {
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let sh: Sh = Arc::new(Mutex::new(Shared { store: core::load_store(), ..Default::default() }));
-        if sh.lock().unwrap().store.settings.lang.is_empty() {
-            let l = core::detect_lang();
-            sh.lock().unwrap().store.settings.lang = l.code().to_string();
-            core::persist_settings(&sh);
-        }
+        let auto = sh.lock().unwrap().store.settings.lang.is_empty();
         let lang = core::lang(&sh);
         setup_style(&cc.egui_ctx);
         apply_fonts(&cc.egui_ctx, lang);
         core::refresh_latest(sh.clone());
-        Self { sh, lang, step: Step::Apps, pick: BTreeMap::new(), mode: Mode::Portable, uninstalling: false, was_busy: false }
+        Self { sh, lang, auto, step: Step::Apps, pick: BTreeMap::new(), mode: Mode::Portable, uninstalling: false, was_busy: false }
     }
 
     fn t(&self, k: &str) -> &'static str {
@@ -181,15 +179,25 @@ impl App {
                 }
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                let before = self.lang;
-                egui::ComboBox::from_id_salt("lang").width(110.0).selected_text(self.lang.name()).show_ui(ui, |ui| {
+                let mut changed = false;
+                let shown = if self.auto { format!("{} ({})", tr(self.lang, "lang_auto"), self.lang.name()) } else { self.lang.name().to_string() };
+                egui::ComboBox::from_id_salt("lang").width(190.0).selected_text(shown).show_ui(ui, |ui| {
+                    if ui.selectable_label(self.auto, tr(self.lang, "lang_auto")).clicked() && !self.auto {
+                        self.auto = true;
+                        self.lang = core::detect_lang();
+                        changed = true;
+                    }
                     for l in Lang::ALL {
-                        ui.selectable_value(&mut self.lang, l, l.name());
+                        if ui.selectable_label(!self.auto && self.lang == l, l.name()).clicked() && (self.auto || self.lang != l) {
+                            self.auto = false;
+                            self.lang = l;
+                            changed = true;
+                        }
                     }
                 });
-                if self.lang != before {
+                if changed {
                     apply_fonts(ui.ctx(), self.lang);
-                    self.sh.lock().unwrap().store.settings.lang = self.lang.code().to_string();
+                    self.sh.lock().unwrap().store.settings.lang = if self.auto { String::new() } else { self.lang.code().to_string() };
                     core::persist_settings(&self.sh);
                 }
                 let pinned = self.sh.lock().unwrap().store.settings.self_pinned;
